@@ -1,6 +1,7 @@
 import { ESLintUtils, TSESTree } from "@typescript-eslint/utils";
 import { RuleContext } from "@typescript-eslint/utils/ts-eslint";
 import ts from "typescript";
+import * as tsutils from "ts-api-utils";
 
 export interface PluginDocs {
   description: string;
@@ -8,28 +9,46 @@ export interface PluginDocs {
   requiresTypeChecking?: boolean;
 }
 
+type TypeOptionalSymbol = Omit<ts.Type, "symbol"> & {
+  symbol: ts.Symbol | undefined;
+};
+
 const createRule = ESLintUtils.RuleCreator<PluginDocs>(
   () =>
     "https://bitbucket.org/unimorphic/eslint-plugin-no-excess-properties/README.MD"
 );
 
-type TypeOptionalSymbol = Omit<ts.Type, "symbol"> & {
-  symbol: ts.Symbol | undefined;
-};
+function getAllPropertyNames(type: ts.Type): string[] {
+  const allTypes = tsutils.typeConstituents(type);
 
-type NameStrings = (string | undefined)[] | ts.__String[];
+  return allTypes.reduce<string[]>(
+    (all, t) => all.concat(...t.getProperties().map((p) => p.name)),
+    []
+  );
+}
+
+function isObjectLiteral(type: ts.Type): boolean {
+  const allTypes = tsutils.typeConstituents(type);
+
+  return allTypes.some(
+    (t) =>
+      (t as TypeOptionalSymbol).symbol !== undefined &&
+      tsutils.isSymbolFlagSet(t.symbol, ts.SymbolFlags.ObjectLiteral)
+  );
+}
 
 function compareNames(
-  leftPropertyNames: NameStrings,
-  rightPropertyNames: NameStrings,
+  leftPropertyNames: string[],
+  rightPropertyNames: string[],
   rightNode: TSESTree.Node,
   context: Readonly<RuleContext<"noExcessProperties", []>>
 ): void {
-  leftPropertyNames = leftPropertyNames.map((s) => s?.toString());
-  rightPropertyNames = rightPropertyNames.map((s) => s?.toString());
+  if (leftPropertyNames.length <= 0) {
+    return;
+  }
 
   const excessPropertyNames = rightPropertyNames.filter(
-    (n) => n !== undefined && !leftPropertyNames.includes(n)
+    (n) => !leftPropertyNames.includes(n)
   );
 
   if (excessPropertyNames.length > 0) {
@@ -42,45 +61,37 @@ function compareNames(
 }
 
 function compareSymbols(
-  leftType: TypeOptionalSymbol,
-  rightType: TypeOptionalSymbol,
+  leftType: ts.Type,
+  rightType: ts.Type,
   rightNode: TSESTree.Node,
   context: Readonly<RuleContext<"noExcessProperties", []>>
 ): void {
-  if (!leftType.symbol || !rightType.symbol) {
+  if (leftType.getStringIndexType() || leftType.getNumberIndexType()) {
     return;
   }
 
-  let leftPropertyNames: NameStrings = [];
-  let rightPropertyNames: NameStrings = [];
+  let leftPropertyNames: string[] = [];
+  let rightPropertyNames: string[] = [];
 
-  if (
-    leftType.symbol.members &&
-    rightType.symbol.members &&
-    rightType.symbol.escapedName.toString() === "__object"
-  ) {
-    leftPropertyNames = leftType.getProperties().map((p) => p.name);
-    rightPropertyNames = rightType.getProperties().map((p) => p.name);
+  if (isObjectLiteral(rightType)) {
+    leftPropertyNames = getAllPropertyNames(leftType);
+    rightPropertyNames = getAllPropertyNames(rightType);
   }
 
   if (leftPropertyNames.length <= 0 || rightPropertyNames.length <= 0) {
     const leftCallSignatures = leftType.getCallSignatures();
     if (leftCallSignatures.length === 1) {
-      const returnTypeProperties = leftCallSignatures[0]
-        .getReturnType()
-        .getNonNullableType()
-        .getProperties();
-      leftPropertyNames = returnTypeProperties.map((p) => p.name);
+      const returnType = leftCallSignatures[0].getReturnType();
+
+      leftPropertyNames = getAllPropertyNames(returnType);
     }
 
     const rightCallSignatures = rightType.getCallSignatures();
     if (rightCallSignatures.length === 1) {
-      const returnType = rightCallSignatures[0]
-        .getReturnType()
-        .getNonNullableType() as TypeOptionalSymbol;
+      const returnType = rightCallSignatures[0].getReturnType();
 
-      if (returnType.symbol?.escapedName.toString() === "__object") {
-        rightPropertyNames = returnType.getProperties().map((p) => p.name);
+      if (isObjectLiteral(returnType)) {
+        rightPropertyNames = getAllPropertyNames(returnType);
       }
     }
   }
@@ -122,38 +133,22 @@ const noExcessProperties = createRule({
           const paramType = typeChecker.getTypeOfSymbolAtLocation(
             functionSignature.parameters[i],
             functionNode
-          ) as TypeOptionalSymbol;
+          );
 
-          if (paramType.symbol?.escapedName.toString() !== "Array") {
-            compareSymbols(paramType, arg, node.arguments[i], context);
-          }
+          compareSymbols(paramType, arg, node.arguments[i], context);
         }
       },
       VariableDeclarator(node) {
-        if (
-          node.id.typeAnnotation?.typeAnnotation.type !==
-            TSESTree.AST_NODE_TYPES.TSFunctionType ||
-          node.init?.type !== TSESTree.AST_NODE_TYPES.ArrowFunctionExpression ||
-          !node.id.typeAnnotation.typeAnnotation.returnType
-        ) {
+        if (!node.id.typeAnnotation || !node.init) {
           return;
         }
 
-        const functionReturn =
-          node.id.typeAnnotation.typeAnnotation.returnType.typeAnnotation;
-        const arrowFunction = node.init;
-
-        const returnType = services.getTypeAtLocation(functionReturn);
-        const arrowFunctionBodyType = services.getTypeAtLocation(
-          arrowFunction.body
+        const leftType = services.getTypeAtLocation(
+          node.id.typeAnnotation.typeAnnotation
         );
+        const rightType = services.getTypeAtLocation(node.init);
 
-        compareSymbols(
-          returnType,
-          arrowFunctionBodyType,
-          arrowFunction.body,
-          context
-        );
+        compareSymbols(leftType, rightType, node.init, context);
       },
     };
   },
