@@ -43,6 +43,14 @@ ruleTester.run("no-excess-properties", noExcessProperties, {
       function test(param1: () => { prop1: number }) {}
       test(() => ({ prop1: 1 }));
     `,
+    `
+      function test(param1: readonly number[]) {}
+      test([1]);
+    `,
+    `
+      const test: { param1: number; }[] = [];
+      test.push({ param1: 1 })
+    `,
   ],
   invalid: [
     {
