@@ -1,5 +1,5 @@
 import { RuleTester } from "@typescript-eslint/rule-tester";
-import noExcessProperties from "./no-excess-properties";
+import objectLiteral from "./object-literal";
 import path from "path";
 import * as vitest from "vitest";
 
@@ -20,7 +20,7 @@ const ruleTester = new RuleTester({
   },
 });
 
-ruleTester.run("no-excess-properties", noExcessProperties, {
+ruleTester.run("no-excess-properties", objectLiteral, {
   valid: [
     `
       let test1: { prop1: number; } = { prop1: 1 };

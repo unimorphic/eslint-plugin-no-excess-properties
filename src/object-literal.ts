@@ -15,7 +15,7 @@ type TypeOptionalSymbol = Omit<ts.Type, "symbol"> & {
 
 const createRule = ESLintUtils.RuleCreator<PluginDocs>(
   () =>
-    "https://bitbucket.org/unimorphic/eslint-plugin-no-excess-properties/README.MD"
+    "https://bitbucket.org/unimorphic/eslint-plugin-no-excess-properties/README.md"
 );
 
 function getAllPropertyNames(type: ts.Type): string[] {
@@ -155,7 +155,7 @@ const noExcessProperties = createRule({
   defaultOptions: [],
   meta: {
     docs: {
-      description: "Excess properties are not allowed in assignments",
+      description: "Warn when excess properties are found on object literals",
       recommended: true,
       requiresTypeChecking: true,
     },
@@ -165,7 +165,7 @@ const noExcessProperties = createRule({
     type: "suggestion",
     schema: [],
   },
-  name: "no-excess-properties",
+  name: "object-literal",
 });
 
 export default noExcessProperties;

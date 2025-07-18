@@ -1,5 +1,5 @@
 import fs from "fs";
-import noExcessProperties from "./no-excess-properties";
+import objectLiteral from "./object-literal";
 
 const pkg = JSON.parse(fs.readFileSync("./package.json", "utf8")) as {
   name: string;
@@ -14,7 +14,7 @@ const plugin = {
           "no-excess-properties": plugin,
         },
         rules: {
-          "no-excess-properties/no-excess-properties": "warn",
+          "no-excess-properties/object-literal": "warn",
         },
       };
     },
@@ -24,7 +24,7 @@ const plugin = {
     version: pkg.version,
   },
   rules: {
-    "no-excess-properties": noExcessProperties,
+    "object-literal": objectLiteral,
   },
 };
 
