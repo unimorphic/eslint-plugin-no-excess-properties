@@ -145,8 +145,8 @@ const noExcessProperties = createRule({
           return;
         }
 
-        const rightType = services.getTypeAtLocation(node);
         const leftType = typeChecker.getContextualType(leftNode.initializer);
+        const rightType = services.getTypeAtLocation(node);
 
         if (!leftType) {
           return;
