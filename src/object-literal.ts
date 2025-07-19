@@ -171,7 +171,10 @@ const noExcessProperties = createRule({
         let returnType = services.getTypeAtLocation(
           functionNode.returnType.typeAnnotation
         );
-        if (tsutils.isTypeReference(returnType)) {
+        if (
+          returnType.symbol.name === "Promise" &&
+          tsutils.isTypeReference(returnType)
+        ) {
           const promiseTypes = typeChecker.getTypeArguments(returnType);
           if (promiseTypes.length === 1) {
             returnType = promiseTypes[0];
