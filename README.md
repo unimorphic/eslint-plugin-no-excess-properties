@@ -11,6 +11,7 @@ npm install --save-dev eslint-plugin-no-excess-properties
 ```
 
 ## Config
+
 In the `eslint.config.mjs` file:
 
 ### Basic
@@ -40,6 +41,26 @@ export default tseslint.config({
     "no-excess-properties/object-literal": "error",
   },
 })
+```
+
+## Example Linted Code
+
+See the [test file](https://bitbucket.org/unimorphic/eslint-plugin-no-excess-properties/src/master/src/object-literal.test.ts) for more examples
+
+### Incorrect
+
+```
+let test1: { prop1: number; } = { prop1: 1 };
+const test2 = { prop1: 2, extraPropertyNotInTest1: 3 };
+test1 = test2; // Error
+```
+
+### Correct
+
+```
+let test1: { prop1: number; } = { prop1: 1 };
+const test2 = { prop1: 2 };
+test1 = test2; // OK
 ```
 
 ## More Info
