@@ -138,6 +138,22 @@ const noExcessProperties = createRule({
           compareSymbols(paramType, arg, node.arguments[i], context);
         }
       },
+      Property(node) {
+        const leftNode = services.esTreeNodeToTSNodeMap.get(node);
+
+        if (leftNode.kind !== ts.SyntaxKind.PropertyAssignment) {
+          return;
+        }
+
+        const rightType = services.getTypeAtLocation(node);
+        const leftType = typeChecker.getContextualType(leftNode.initializer);
+
+        if (!leftType) {
+          return;
+        }
+
+        compareSymbols(leftType, rightType, node, context);
+      },
       VariableDeclarator(node) {
         if (!node.id.typeAnnotation || !node.init) {
           return;

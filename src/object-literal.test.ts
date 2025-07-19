@@ -36,26 +36,30 @@ ruleTester.run("no-excess-properties", objectLiteral, {
       const test: () => { prop1: number; } = () => ({ prop1: 1 })
     `,
     `
-      function test(param1: { prop1: number }) {}
-      test({ prop1: 1 });
+      function test(param1: { prop1: number } | null) {}
+      test(true ? { prop1: 1 } : null);
     `,
     `
-      function test(param1: () => { prop1: number } | null) {}
+      function test(param1: () => { prop1: number }) {}
       test(() => ({ prop1: 1 }));
-    `,
-    `
-      const test: { param1: number; }[] = [];
-      test.push({ param1: 1 })
     `,
     `
       const test1: { prop2: number; } = { prop2: 1 };
       const test2: { prop2: number } = { ...test1 };
     `,
     `
-      const test2: Record<string, number> & { prop2: 1 } = { prop1: 1 };
+      const test1 = { prop4: 2 };
+      const test2: { prop2: { prop3: { prop4: number; } } } = { prop2: { prop3: test1 } };
     `,
     `
       Object.keys({ prop1: 1 })
+    `,
+    `
+      const test2: Record<string, number> & { prop2: 1 } = { prop1: 1 };
+    `,
+    `
+      const test: { param1: number; }[] = [];
+      test.push({ param1: 1 })
     `,
     `
       interface Test1 { prop1: number }
@@ -150,6 +154,21 @@ ruleTester.run("no-excess-properties", objectLiteral, {
         {
           column: 42,
           endColumn: 64,
+          endLine: 3,
+          line: 3,
+          messageId: "noExcessProperties",
+        },
+      ],
+    },
+    {
+      code: `
+        const test1 = { prop1: 1, prop4: 2 };
+        const test2: { prop2: { prop3: { prop4: number; } } } = { prop2: { prop3: test1 } };
+      `,
+      errors: [
+        {
+          column: 76,
+          endColumn: 88,
           endLine: 3,
           line: 3,
           messageId: "noExcessProperties",
