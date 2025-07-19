@@ -172,7 +172,7 @@ const noExcessProperties = createRule({
           functionNode.returnType.typeAnnotation
         );
         if (
-          returnType.symbol.name === "Promise" &&
+          (returnType as TypeOptionalSymbol).symbol?.name === "Promise" &&
           tsutils.isTypeReference(returnType)
         ) {
           const promiseTypes = typeChecker.getTypeArguments(returnType);

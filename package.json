@@ -2,7 +2,7 @@
   "name": "eslint-plugin-no-excess-properties",
   "description": "Excess properties are not allowed on object literals",
   "license": "MIT",
-  "version": "0.0.3",
+  "version": "0.0.4",
   "homepage": "https://bitbucket.org/unimorphic/eslint-plugin-no-excess-properties",
   "keywords": [
     "eslint-plugin",
