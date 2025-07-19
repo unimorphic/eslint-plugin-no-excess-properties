@@ -1,4 +1,4 @@
-import { ESLintUtils, TSESTree } from "@typescript-eslint/utils";
+import { ASTUtils, ESLintUtils, TSESTree } from "@typescript-eslint/utils";
 import { RuleContext } from "@typescript-eslint/utils/ts-eslint";
 import ts from "typescript";
 import * as tsutils from "ts-api-utils";
@@ -129,13 +129,13 @@ const noExcessProperties = createRule({
             break;
           }
 
-          const arg = services.getTypeAtLocation(node.arguments[i]);
+          const argType = services.getTypeAtLocation(node.arguments[i]);
           const paramType = typeChecker.getTypeOfSymbolAtLocation(
             functionSignature.parameters[i],
             functionNode
           );
 
-          compareSymbols(paramType, arg, node.arguments[i], context);
+          compareSymbols(paramType, argType, node.arguments[i], context);
         }
       },
       Property(node) {
@@ -153,6 +153,34 @@ const noExcessProperties = createRule({
         }
 
         compareSymbols(leftType, rightType, node, context);
+      },
+      ReturnStatement(node) {
+        if (!node.argument) {
+          return;
+        }
+
+        let functionNode: TSESTree.Node | undefined = node.parent;
+        while (functionNode && !ASTUtils.isFunction(functionNode)) {
+          functionNode = functionNode.parent;
+        }
+
+        if (!functionNode?.returnType) {
+          return;
+        }
+
+        let returnType = services.getTypeAtLocation(
+          functionNode.returnType.typeAnnotation
+        );
+        if (tsutils.isTypeReference(returnType)) {
+          const promiseTypes = typeChecker.getTypeArguments(returnType);
+          if (promiseTypes.length === 1) {
+            returnType = promiseTypes[0];
+          }
+        }
+
+        const argType = services.getTypeAtLocation(node.argument);
+
+        compareSymbols(returnType, argType, node.argument, context);
       },
       VariableDeclarator(node) {
         if (!node.id.typeAnnotation || !node.init) {

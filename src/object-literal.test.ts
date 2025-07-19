@@ -52,6 +52,14 @@ ruleTester.run("no-excess-properties", objectLiteral, {
       const test2: { prop2: { prop3: { prop4: number; } } } = { prop2: { prop3: test1 } };
     `,
     `
+      const test1 = { prop1: 1 };
+      function test(): { prop1: number } { return test1 }
+    `,
+    `
+      const test1 = { prop1: 1 };
+      async function test(): Promise<{ prop1: number }> { return test1 }
+    `,
+    `
       Object.keys({ prop1: 1 })
     `,
     `
@@ -169,6 +177,36 @@ ruleTester.run("no-excess-properties", objectLiteral, {
         {
           column: 76,
           endColumn: 88,
+          endLine: 3,
+          line: 3,
+          messageId: "noExcessProperties",
+        },
+      ],
+    },
+    {
+      code: `
+        const test1 = { prop1: 1, prop2: 2 };
+        function test(): { prop1: number } { return test1 }
+      `,
+      errors: [
+        {
+          column: 53,
+          endColumn: 58,
+          endLine: 3,
+          line: 3,
+          messageId: "noExcessProperties",
+        },
+      ],
+    },
+    {
+      code: `
+        const test1 = { prop1: 1, prop2: 2 };
+        async function test(): Promise<{ prop1: number }> { return test1 }
+      `,
+      errors: [
+        {
+          column: 68,
+          endColumn: 73,
           endLine: 3,
           line: 3,
           messageId: "noExcessProperties",
