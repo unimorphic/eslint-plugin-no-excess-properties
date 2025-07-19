@@ -209,8 +209,8 @@ const noExcessProperties = createRule({
     messages: {
       noExcessProperties: "Excess properties '{{ excessPropertyNames }}' found",
     },
-    type: "suggestion",
     schema: [],
+    type: "suggestion",
   },
   name: "object-literal",
 });
