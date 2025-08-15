@@ -14,8 +14,7 @@ type TypeOptionalSymbol = Omit<ts.Type, "symbol"> & {
 };
 
 const createRule = ESLintUtils.RuleCreator<PluginDocs>(
-  () =>
-    "https://bitbucket.org/unimorphic/eslint-plugin-no-excess-properties/README.md"
+  () => "https://bitbucket.org/unimorphic/eslint-plugin-no-excess-properties"
 );
 
 function getAllPropertyNames(type: ts.Type): string[] {
@@ -66,7 +65,15 @@ function compareSymbols(
   rightNode: TSESTree.Node,
   context: Readonly<RuleContext<"noExcessProperties", []>>
 ): void {
-  if (leftType.getStringIndexType() || leftType.getNumberIndexType()) {
+  if (
+    tsutils
+      .typeConstituents(leftType)
+      .some(
+        (t) =>
+          t.getStringIndexType() !== undefined ||
+          t.getNumberIndexType() !== undefined
+      )
+  ) {
     return;
   }
 

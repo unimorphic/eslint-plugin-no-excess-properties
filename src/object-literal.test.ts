@@ -181,6 +181,9 @@ ruleTester.run("object-literal", objectLiteral, {
       const test: Record<string, number> & { prop2: 1 } = { prop1: 1 };
     `,
     `
+      const test: { prop2: 1 } | Record<string, number> = { prop1: 1 };
+    `,
+    `
       interface Test1 { prop1: number }
       interface Test2 extends Test1 { prop2: number }
       const test1: Test2 = { prop1: 1, prop2: 1 }
