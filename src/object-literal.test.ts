@@ -178,10 +178,40 @@ ruleTester.run("object-literal", objectLiteral, {
 ruleTester.run("object-literal", objectLiteral, {
   valid: [
     `
+      const test1: { prop1: 1 }[] = [{ prop1: 1 }].map(a => ({ ...a, prop1: 2 }))
+    `,
+    `
+      const test: { prop1: number; }[] = [];
+      test.push({ prop1: 1 })
+    `,
+  ],
+  invalid: [
+    {
+      code: `
+        const test1: { prop1: 1 }[] = [{ prop1: 1 }].map(a => ({ ...a, prop2: 2 }))
+      `,
+      errors: [createError({ column: 39, endColumn: 84, line: 2 })],
+    },
+    {
+      code: `
+        const test: { prop1: number; }[] = [];
+        test.push({ prop1: 1, prop: 2 })
+      `,
+      errors: [createError({ column: 19, endColumn: 40, line: 3 })],
+    },
+  ],
+});
+
+ruleTester.run("object-literal", objectLiteral, {
+  valid: [
+    `
       const test: Record<string, number> & { prop2: 1 } = { prop1: 1 };
     `,
     `
       const test: { prop2: 1 } | Record<string, number> = { prop1: 1 };
+    `,
+    `
+      const test: Record<number, number> & { prop2: 1 } = { 1: 1 };
     `,
     `
       interface Test1 { prop1: number }
@@ -191,10 +221,6 @@ ruleTester.run("object-literal", objectLiteral, {
     `,
     `
       Object.keys({ prop1: 1 })
-    `,
-    `
-      const test: { prop1: number; }[] = [];
-      test.push({ prop1: 1 })
     `,
   ],
   invalid: [],

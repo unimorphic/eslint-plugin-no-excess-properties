@@ -2,7 +2,7 @@
   "name": "eslint-plugin-no-excess-properties",
   "description": "Excess properties are not allowed on object literals",
   "license": "MIT",
-  "version": "0.0.5",
+  "version": "0.0.6",
   "homepage": "https://bitbucket.org/unimorphic/eslint-plugin-no-excess-properties",
   "keywords": [
     "eslint-plugin",
@@ -23,6 +23,7 @@
   "main": "dist/index.js",
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "format": "prettier --write .",
     "lint": "eslint .",
     "prepare": "npm run build",
     "test": "vitest"

@@ -14,7 +14,7 @@ type TypeOptionalSymbol = Omit<ts.Type, "symbol"> & {
 };
 
 const createRule = ESLintUtils.RuleCreator<PluginDocs>(
-  () => "https://bitbucket.org/unimorphic/eslint-plugin-no-excess-properties"
+  () => "https://bitbucket.org/unimorphic/eslint-plugin-no-excess-properties",
 );
 
 function getAllPropertyNames(type: ts.Type): string[] {
@@ -22,7 +22,7 @@ function getAllPropertyNames(type: ts.Type): string[] {
 
   return allTypes.reduce<string[]>(
     (all, t) => all.concat(...t.getProperties().map((p) => p.name)),
-    []
+    [],
   );
 }
 
@@ -32,7 +32,7 @@ function isObjectLiteral(type: ts.Type): boolean {
   return allTypes.some(
     (t) =>
       (t as TypeOptionalSymbol).symbol !== undefined &&
-      tsutils.isSymbolFlagSet(t.symbol, ts.SymbolFlags.ObjectLiteral)
+      tsutils.isSymbolFlagSet(t.symbol, ts.SymbolFlags.ObjectLiteral),
   );
 }
 
@@ -40,14 +40,14 @@ function compareNames(
   leftPropertyNames: string[],
   rightPropertyNames: string[],
   rightNode: TSESTree.Node,
-  context: Readonly<RuleContext<"noExcessProperties", []>>
+  context: Readonly<RuleContext<"noExcessProperties", []>>,
 ): void {
   if (leftPropertyNames.length <= 0) {
     return;
   }
 
   const excessPropertyNames = rightPropertyNames.filter(
-    (n) => !leftPropertyNames.includes(n)
+    (n) => !leftPropertyNames.includes(n),
   );
 
   if (excessPropertyNames.length > 0) {
@@ -63,47 +63,37 @@ function compareSymbols(
   leftType: ts.Type,
   rightType: ts.Type,
   rightNode: TSESTree.Node,
-  context: Readonly<RuleContext<"noExcessProperties", []>>
+  context: Readonly<RuleContext<"noExcessProperties", []>>,
 ): void {
+  const leftCallSignatures = leftType.getCallSignatures();
+  if (leftCallSignatures.length === 1) {
+    leftType = leftCallSignatures[0].getReturnType();
+  }
+  const rightCallSignatures = rightType.getCallSignatures();
+  if (rightCallSignatures.length === 1) {
+    rightType = rightCallSignatures[0].getReturnType();
+  }
+
+  const leftArrayType = leftType.getNumberIndexType();
+  const rightArrayType = rightType.getNumberIndexType();
+  if (leftArrayType && rightArrayType) {
+    leftType = leftArrayType;
+    rightType = rightArrayType;
+  }
+
   if (
+    isObjectLiteral(rightType) &&
     tsutils
       .typeConstituents(leftType)
-      .some(
-        (t) =>
-          t.getStringIndexType() !== undefined ||
-          t.getNumberIndexType() !== undefined
-      )
+      .every((t) => !t.getStringIndexType() && !t.getNumberIndexType())
   ) {
-    return;
+    compareNames(
+      getAllPropertyNames(leftType),
+      getAllPropertyNames(rightType),
+      rightNode,
+      context,
+    );
   }
-
-  let leftPropertyNames: string[] = [];
-  let rightPropertyNames: string[] = [];
-
-  if (isObjectLiteral(rightType)) {
-    leftPropertyNames = getAllPropertyNames(leftType);
-    rightPropertyNames = getAllPropertyNames(rightType);
-  }
-
-  if (leftPropertyNames.length <= 0 || rightPropertyNames.length <= 0) {
-    const leftCallSignatures = leftType.getCallSignatures();
-    if (leftCallSignatures.length === 1) {
-      const returnType = leftCallSignatures[0].getReturnType();
-
-      leftPropertyNames = getAllPropertyNames(returnType);
-    }
-
-    const rightCallSignatures = rightType.getCallSignatures();
-    if (rightCallSignatures.length === 1) {
-      const returnType = rightCallSignatures[0].getReturnType();
-
-      if (isObjectLiteral(returnType)) {
-        rightPropertyNames = getAllPropertyNames(returnType);
-      }
-    }
-  }
-
-  compareNames(leftPropertyNames, rightPropertyNames, rightNode, context);
 }
 
 const noExcessProperties = createRule({
@@ -137,10 +127,20 @@ const noExcessProperties = createRule({
           }
 
           const argType = services.getTypeAtLocation(node.arguments[i]);
-          const paramType = typeChecker.getTypeOfSymbolAtLocation(
+          let paramType = typeChecker.getTypeOfSymbolAtLocation(
             functionSignature.parameters[i],
-            functionNode
+            functionNode,
           );
+
+          const declarations = functionSignature.parameters[i].declarations;
+          if (
+            declarations?.some((d) => ts.isParameter(d) && d.dotDotDotToken)
+          ) {
+            const arrayType = paramType.getNumberIndexType();
+            if (arrayType) {
+              paramType = arrayType;
+            }
+          }
 
           compareSymbols(paramType, argType, node.arguments[i], context);
         }
@@ -176,7 +176,7 @@ const noExcessProperties = createRule({
         }
 
         let returnType = services.getTypeAtLocation(
-          functionNode.returnType.typeAnnotation
+          functionNode.returnType.typeAnnotation,
         );
         if (
           (returnType as TypeOptionalSymbol).symbol?.name === "Promise" &&
@@ -198,7 +198,7 @@ const noExcessProperties = createRule({
         }
 
         const leftType = services.getTypeAtLocation(
-          node.id.typeAnnotation.typeAnnotation
+          node.id.typeAnnotation.typeAnnotation,
         );
         const rightType = services.getTypeAtLocation(node.init);
 
