@@ -1,4 +1,9 @@
-import { ASTUtils, ESLintUtils, TSESTree } from "@typescript-eslint/utils";
+import {
+  ASTUtils,
+  ESLintUtils,
+  ParserServicesWithTypeInformation,
+  TSESTree,
+} from "@typescript-eslint/utils";
 import { RuleContext } from "@typescript-eslint/utils/ts-eslint";
 import ts from "typescript";
 import * as tsutils from "ts-api-utils";
@@ -22,6 +27,17 @@ function isObjectLiteral(type: ts.Type): boolean {
     (type as TypeOptionalSymbol).symbol !== undefined &&
     tsutils.isSymbolFlagSet(type.symbol, ts.SymbolFlags.ObjectLiteral)
   );
+}
+
+function isChildNode(node: TSESTree.Node, parentNode: TSESTree.Node) {
+  let parent: TSESTree.Node | undefined = node;
+  do {
+    parent = parent.parent;
+    if (parent === parentNode) {
+      return true;
+    }
+  } while (parent);
+  return false;
 }
 
 function splitTypes(types: ts.Type[]) {
@@ -49,11 +65,51 @@ function splitTypes(types: ts.Type[]) {
   return result;
 }
 
+function report(
+  properties: ts.Symbol[],
+  parentNode: TSESTree.Node,
+  context: Readonly<RuleContext<"noExcessProperties" | "noExcessProperty", []>>,
+  services: ParserServicesWithTypeInformation,
+) {
+  const propertyNodes = properties.map((p) =>
+    p.valueDeclaration
+      ? services.tsNodeToESTreeNodeMap.get(p.valueDeclaration)
+      : null,
+  );
+
+  if (propertyNodes.every((p) => p && isChildNode(p, parentNode))) {
+    for (let i = 0; i < properties.length; i++) {
+      context.report({
+        data: { excessPropertyName: properties[i].name },
+        messageId: "noExcessProperty",
+        node: propertyNodes[i] ?? parentNode,
+      });
+    }
+    return;
+  }
+
+  if (properties.length > 1) {
+    context.report({
+      data: { excessPropertyNames: properties.map((p) => p.name).join(", ") },
+      messageId: "noExcessProperties",
+      node: parentNode,
+    });
+    return;
+  }
+
+  context.report({
+    data: { excessPropertyName: properties[0].name },
+    messageId: "noExcessProperty",
+    node: parentNode,
+  });
+}
+
 function compareTypes(
   leftTypes: ts.Type[],
   rightTypes: ts.Type[],
   rightNode: TSESTree.Node,
-  context: Readonly<RuleContext<"noExcessProperties", []>>,
+  context: Readonly<RuleContext<"noExcessProperties" | "noExcessProperty", []>>,
+  services: ParserServicesWithTypeInformation,
 ): void {
   const allLeftTypes = splitTypes(
     leftTypes.flatMap((t) => tsutils.unionConstituents(t)),
@@ -72,6 +128,7 @@ function compareTypes(
         allRightTypes.advancedTypes[i],
         rightNode,
         context,
+        services,
       );
     }
   }
@@ -81,9 +138,9 @@ function compareTypes(
       continue;
     }
 
-    const rightPropertyNames = rightType.getProperties().map((p) => p.name);
+    const rightProperties = rightType.getProperties();
 
-    let bestMatchExcessPropertyNames: string[] | null = null;
+    let bestMatchExcessProperties: ts.Symbol[] | null = null;
     for (const leftType of allLeftTypes.basicTypes) {
       const leftPropertyNames = leftType.getProperties().map((p) => p.name);
 
@@ -91,34 +148,25 @@ function compareTypes(
         leftType.getStringIndexType() !== undefined ||
         leftType.getNumberIndexType() !== undefined
       ) {
-        bestMatchExcessPropertyNames = null;
+        bestMatchExcessProperties = null;
         break;
       }
 
-      const excessPropertyNames = rightPropertyNames.filter(
-        (n) => !leftPropertyNames.includes(n),
+      const excessProperties = rightProperties.filter(
+        (p) => !leftPropertyNames.includes(p.name),
       );
 
       if (
         leftPropertyNames.length > 0 &&
-        (bestMatchExcessPropertyNames === null ||
-          excessPropertyNames.length < bestMatchExcessPropertyNames.length)
+        (bestMatchExcessProperties === null ||
+          excessProperties.length < bestMatchExcessProperties.length)
       ) {
-        bestMatchExcessPropertyNames = excessPropertyNames;
+        bestMatchExcessProperties = excessProperties;
       }
     }
 
-    if (
-      bestMatchExcessPropertyNames &&
-      bestMatchExcessPropertyNames.length > 0
-    ) {
-      context.report({
-        data: {
-          excessPropertyNames: bestMatchExcessPropertyNames.join(", "),
-        },
-        messageId: "noExcessProperties",
-        node: rightNode,
-      });
+    if (bestMatchExcessProperties && bestMatchExcessProperties.length > 0) {
+      report(bestMatchExcessProperties, rightNode, context, services);
     }
   }
 }
@@ -133,7 +181,7 @@ const noExcessProperties = createRule({
         const leftType = services.getTypeAtLocation(node.left);
         const rightType = services.getTypeAtLocation(node.right);
 
-        compareTypes([leftType], [rightType], node.right, context);
+        compareTypes([leftType], [rightType], node.right, context, services);
       },
       CallExpression(node) {
         if (node.arguments.length <= 0) {
@@ -169,7 +217,13 @@ const noExcessProperties = createRule({
             }
           }
 
-          compareTypes([paramType], [argType], node.arguments[i], context);
+          compareTypes(
+            [paramType],
+            [argType],
+            node.arguments[i],
+            context,
+            services,
+          );
         }
       },
       Property(node) {
@@ -186,7 +240,7 @@ const noExcessProperties = createRule({
           return;
         }
 
-        compareTypes([leftType], [rightType], node, context);
+        compareTypes([leftType], [rightType], node, context, services);
       },
       ReturnStatement(node) {
         if (!node.argument) {
@@ -217,7 +271,7 @@ const noExcessProperties = createRule({
 
         const argType = services.getTypeAtLocation(node.argument);
 
-        compareTypes([returnType], [argType], node.argument, context);
+        compareTypes([returnType], [argType], node.argument, context, services);
       },
       VariableDeclarator(node) {
         if (!node.id.typeAnnotation || !node.init) {
@@ -229,7 +283,7 @@ const noExcessProperties = createRule({
         );
         const rightType = services.getTypeAtLocation(node.init);
 
-        compareTypes([leftType], [rightType], node.init, context);
+        compareTypes([leftType], [rightType], node.init, context, services);
       },
     };
   },
@@ -241,6 +295,7 @@ const noExcessProperties = createRule({
       requiresTypeChecking: true,
     },
     messages: {
+      noExcessProperty: "Excess property '{{ excessPropertyName }}' found",
       noExcessProperties: "Excess properties '{{ excessPropertyNames }}' found",
     },
     schema: [],

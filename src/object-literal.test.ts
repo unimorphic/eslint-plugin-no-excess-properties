@@ -8,18 +8,19 @@ RuleTester.it = vitest.it;
 RuleTester.itOnly = vitest.it.only;
 RuleTester.describe = vitest.describe;
 
-function createError(props: {
-  line: number;
-  column: number;
-  endColumn: number;
-  endLine?: number;
-}): TestCaseError<"noExcessProperties"> {
+function createError(
+  props: Partial<TestCaseError<"noExcessProperties" | "noExcessProperty">> & {
+    line: number;
+    column: number;
+    endColumn: number;
+    isMulti?: boolean;
+  },
+): TestCaseError<"noExcessProperties" | "noExcessProperty"> {
+  const { endLine, isMulti, ...otherProps } = props;
   return {
-    column: props.column,
-    endColumn: props.endColumn,
-    endLine: props.endLine ?? props.line,
-    line: props.line,
-    messageId: "noExcessProperties",
+    ...otherProps,
+    endLine: endLine ?? props.line,
+    messageId: isMulti ? "noExcessProperties" : "noExcessProperty",
   };
 }
 
@@ -87,7 +88,7 @@ ruleTester.run("object-literal", objectLiteral, {
       code: `
         const test: () => { prop1: number; } = () => ({ prop1: 1, prop2: 2 })
       `,
-      errors: [createError({ column: 48, endColumn: 78, line: 2 })],
+      errors: [createError({ column: 67, endColumn: 75, line: 2 })],
     },
     {
       code: `
@@ -127,21 +128,21 @@ ruleTester.run("object-literal", objectLiteral, {
         function test(param1: { prop1: number }) {}
         test({ prop1: 1, prop2: 2 });
       `,
-      errors: [createError({ column: 14, endColumn: 36, line: 3 })],
+      errors: [createError({ column: 26, endColumn: 34, line: 3 })],
     },
     {
       code: `
         function test(param1: () => { prop1: number }) {}
         test(() => ({ prop1: 1, prop2: 2 }));
       `,
-      errors: [createError({ column: 14, endColumn: 44, line: 3 })],
+      errors: [createError({ column: 33, endColumn: 41, line: 3 })],
     },
     {
       code: `
         function test(param1: number, param2: { prop1: number } | null) {}
         test(1, true ? { prop1: 1, prop2: 2 } : null);
       `,
-      errors: [createError({ column: 17, endColumn: 53, line: 3 })],
+      errors: [createError({ column: 36, endColumn: 44, line: 3 })],
     },
   ],
 });
@@ -190,14 +191,14 @@ ruleTester.run("object-literal", objectLiteral, {
       code: `
         const test1: { prop1: 1 }[] = [{ prop1: 1 }].map(a => ({ ...a, prop2: 2 }))
       `,
-      errors: [createError({ column: 39, endColumn: 84, line: 2 })],
+      errors: [createError({ column: 72, endColumn: 80, line: 2 })],
     },
     {
       code: `
         const test: { prop1: number; }[] = [];
         test.push({ prop1: 1, prop: 2 })
       `,
-      errors: [createError({ column: 19, endColumn: 40, line: 3 })],
+      errors: [createError({ column: 31, endColumn: 38, line: 3 })],
     },
   ],
 });
@@ -227,28 +228,28 @@ ruleTester.run("object-literal", objectLiteral, {
         function test(param1: { prop1: number }[] | (() => void)) {}
         test([{ prop1: 1, prop2: 2 }]);
       `,
-      errors: [createError({ column: 14, endColumn: 38, line: 3 })],
+      errors: [createError({ column: 27, endColumn: 35, line: 3 })],
     },
     {
       code: `
         function test(param1: { prop1: number }[] | (() => { prop1: number })) {}
         test(() => ({ prop1: 1, prop2: 2 }));
       `,
-      errors: [createError({ column: 14, endColumn: 44, line: 3 })],
+      errors: [createError({ column: 33, endColumn: 41, line: 3 })],
     },
     {
       code: `
         function test(param1: { prop1: number } | { prop1: number, prop2: number }) {}
         test({ prop1: 1, prop2: 2, prop3: 3 });
       `,
-      errors: [createError({ column: 14, endColumn: 46, line: 3 })],
+      errors: [createError({ column: 36, endColumn: 44, line: 3 })],
     },
     {
       code: `
         function test(param1: { prop1: number } | { prop2: number }) {}
         test({ prop1: 1, prop2: 2 });
       `,
-      errors: [createError({ column: 14, endColumn: 36, line: 3 })],
+      errors: [createError({ column: 26, endColumn: 34, line: 3 })],
     },
   ],
 });
@@ -266,7 +267,7 @@ ruleTester.run("object-literal", objectLiteral, {
         function test(param1: { prop1: number } & { prop2: number }) {}
         test({ prop1: 1, prop2: 2, prop3: 3 });
       `,
-      errors: [createError({ column: 14, endColumn: 46, line: 3 })],
+      errors: [createError({ column: 36, endColumn: 44, line: 3 })],
     },
   ],
 });
@@ -288,14 +289,56 @@ ruleTester.run("object-literal", objectLiteral, {
         function test(param1: ({ prop1: number } | { prop2: number })[]) {}
         test([{ prop1: 1, prop2: 2 }]);
       `,
-      errors: [createError({ column: 14, endColumn: 38, line: 3 })],
+      errors: [createError({ column: 27, endColumn: 35, line: 3 })],
     },
     {
       code: `
         function test(param1: () => ({ prop1: number } | { prop2: number } | null)[]) {}
         test(() => [true ? { prop1: 1, prop2: 2 } : null]);
       `,
-      errors: [createError({ column: 14, endColumn: 58, line: 3 })],
+      errors: [createError({ column: 40, endColumn: 48, line: 3 })],
+    },
+  ],
+});
+
+ruleTester.run("object-literal", objectLiteral, {
+  valid: [],
+  invalid: [
+    {
+      code: `
+        function test(param1: { prop1: number }) {}
+        test({ prop1: 1, prop2: 2, prop3: 3 });
+      `,
+      errors: [
+        createError({
+          column: 26,
+          data: { excessPropertyName: "prop2" },
+          endColumn: 34,
+          line: 3,
+        }),
+        createError({
+          column: 36,
+          data: { excessPropertyName: "prop3" },
+          endColumn: 44,
+          line: 3,
+        }),
+      ],
+    },
+    {
+      code: `
+        let test1: { prop1: number; } = { prop1: 1 };
+        const test2 = { prop1: 2, prop2: 3, prop3: 4 };
+        test1 = test2;
+      `,
+      errors: [
+        createError({
+          column: 17,
+          data: { excessPropertyNames: "prop2, prop3" },
+          endColumn: 22,
+          line: 4,
+          isMulti: true,
+        }),
+      ],
     },
   ],
 });
