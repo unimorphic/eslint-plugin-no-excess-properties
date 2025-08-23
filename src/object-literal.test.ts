@@ -291,6 +291,9 @@ ruleTester.run("object-literal", objectLiteral, {
     `
       Object.keys({ prop1: 1 })
     `,
+    `
+      const test: { prop1: number, [property: string]: number; }[] = [{ prop2: 1 }];
+    `,
   ],
   invalid: [],
 });

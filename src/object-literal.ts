@@ -33,7 +33,10 @@ function resolveType(type: ts.Type) {
   }
 
   const arrayType = resolvedType.getNumberIndexType();
-  if (arrayType) {
+  if (
+    arrayType &&
+    (resolvedType as TypeOptionalSymbol).symbol?.name === "Array"
+  ) {
     resolvedType = arrayType;
   }
 
@@ -48,17 +51,6 @@ function compareTypes(
 ): void {
   const allLeftTypes = tsutils.unionConstituents(leftType);
   const allRightTypes = tsutils.unionConstituents(rightType);
-
-  if (
-    allLeftTypes.some(
-      (t) =>
-        t.getStringIndexType() !== undefined ||
-        (t.getNumberIndexType() !== undefined &&
-          (t as TypeOptionalSymbol).symbol?.name !== "Array"),
-    )
-  ) {
-    return;
-  }
 
   for (const rightType of allRightTypes) {
     const rightResolvedType = resolveType(rightType);
@@ -77,6 +69,14 @@ function compareTypes(
       const leftPropertyNames = leftResolvedType
         .getProperties()
         .map((p) => p.name);
+
+      if (
+        leftResolvedType.getStringIndexType() !== undefined ||
+        leftResolvedType.getNumberIndexType() !== undefined
+      ) {
+        bestMatchExcessPropertyNames = null;
+        break;
+      }
 
       const excessPropertyNames = rightPropertyNames.filter(
         (n) => !leftPropertyNames.includes(n),
