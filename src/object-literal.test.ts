@@ -205,6 +205,75 @@ ruleTester.run("object-literal", objectLiteral, {
 ruleTester.run("object-literal", objectLiteral, {
   valid: [
     `
+      function test(param1: { prop1: number }[] | (() => void)) {}
+      test([{ prop1: 1 }]);
+    `,
+    `
+      function test(param1: { prop1: number }[] | (() => { prop1: number })) {}
+      test(() => ({ prop1: 1 }));
+    `,
+    `
+      function test(param1: { prop1: number } | { prop1: number, prop2: number }) {}
+      test({ prop1: 1, prop2: 2 });
+    `,
+    `
+      function test(param1: { prop1: number } | { prop2: number }) {}
+      test({ prop2: 2 });
+    `,
+  ],
+  invalid: [
+    {
+      code: `
+        function test(param1: { prop1: number }[] | (() => void)) {}
+        test([{ prop1: 1, prop2: 2 }]);
+      `,
+      errors: [createError({ column: 14, endColumn: 38, line: 3 })],
+    },
+    {
+      code: `
+        function test(param1: { prop1: number }[] | (() => { prop1: number })) {}
+        test(() => ({ prop1: 1, prop2: 2 }));
+      `,
+      errors: [createError({ column: 14, endColumn: 44, line: 3 })],
+    },
+    {
+      code: `
+        function test(param1: { prop1: number } | { prop1: number, prop2: number }) {}
+        test({ prop1: 1, prop2: 2, prop3: 3 });
+      `,
+      errors: [createError({ column: 14, endColumn: 46, line: 3 })],
+    },
+    {
+      code: `
+        function test(param1: { prop1: number } | { prop2: number }) {}
+        test({ prop1: 1, prop2: 2 });
+      `,
+      errors: [createError({ column: 14, endColumn: 36, line: 3 })],
+    },
+  ],
+});
+
+ruleTester.run("object-literal", objectLiteral, {
+  valid: [
+    `
+      function test(param1: { prop1: number } & { prop2: number }) {}
+      test({ prop1: 1, prop2: 2 });
+    `,
+  ],
+  invalid: [
+    {
+      code: `
+        function test(param1: { prop1: number } & { prop2: number }) {}
+        test({ prop1: 1, prop2: 2, prop3: 3 });
+      `,
+      errors: [createError({ column: 14, endColumn: 46, line: 3 })],
+    },
+  ],
+});
+
+ruleTester.run("object-literal", objectLiteral, {
+  valid: [
+    `
       const test: Record<string, number> & { prop2: 1 } = { prop1: 1 };
     `,
     `

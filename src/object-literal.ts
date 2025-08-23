@@ -17,82 +17,92 @@ const createRule = ESLintUtils.RuleCreator<PluginDocs>(
   () => "https://bitbucket.org/unimorphic/eslint-plugin-no-excess-properties",
 );
 
-function getAllPropertyNames(type: ts.Type): string[] {
-  const allTypes = tsutils.typeConstituents(type);
-
-  return allTypes.reduce<string[]>(
-    (all, t) => all.concat(...t.getProperties().map((p) => p.name)),
-    [],
-  );
-}
-
 function isObjectLiteral(type: ts.Type): boolean {
-  const allTypes = tsutils.typeConstituents(type);
-
-  return allTypes.some(
-    (t) =>
-      (t as TypeOptionalSymbol).symbol !== undefined &&
-      tsutils.isSymbolFlagSet(t.symbol, ts.SymbolFlags.ObjectLiteral),
+  return (
+    (type as TypeOptionalSymbol).symbol !== undefined &&
+    tsutils.isSymbolFlagSet(type.symbol, ts.SymbolFlags.ObjectLiteral)
   );
 }
 
-function compareNames(
-  leftPropertyNames: string[],
-  rightPropertyNames: string[],
-  rightNode: TSESTree.Node,
-  context: Readonly<RuleContext<"noExcessProperties", []>>,
-): void {
-  if (leftPropertyNames.length <= 0) {
-    return;
+function resolveType(type: ts.Type) {
+  let resolvedType = type;
+
+  const callSignatures = resolvedType.getCallSignatures();
+  if (callSignatures.length === 1) {
+    resolvedType = callSignatures[0].getReturnType();
   }
 
-  const excessPropertyNames = rightPropertyNames.filter(
-    (n) => !leftPropertyNames.includes(n),
-  );
-
-  if (excessPropertyNames.length > 0) {
-    context.report({
-      data: { excessPropertyNames: excessPropertyNames.join(", ") },
-      messageId: "noExcessProperties",
-      node: rightNode,
-    });
+  const arrayType = resolvedType.getNumberIndexType();
+  if (arrayType) {
+    resolvedType = arrayType;
   }
+
+  return resolvedType;
 }
 
-function compareSymbols(
+function compareTypes(
   leftType: ts.Type,
   rightType: ts.Type,
   rightNode: TSESTree.Node,
   context: Readonly<RuleContext<"noExcessProperties", []>>,
 ): void {
-  const leftCallSignatures = leftType.getCallSignatures();
-  if (leftCallSignatures.length === 1) {
-    leftType = leftCallSignatures[0].getReturnType();
-  }
-  const rightCallSignatures = rightType.getCallSignatures();
-  if (rightCallSignatures.length === 1) {
-    rightType = rightCallSignatures[0].getReturnType();
-  }
-
-  const leftArrayType = leftType.getNumberIndexType();
-  const rightArrayType = rightType.getNumberIndexType();
-  if (leftArrayType && rightArrayType) {
-    leftType = leftArrayType;
-    rightType = rightArrayType;
-  }
+  const allLeftTypes = tsutils.unionConstituents(leftType);
+  const allRightTypes = tsutils.unionConstituents(rightType);
 
   if (
-    isObjectLiteral(rightType) &&
-    tsutils
-      .typeConstituents(leftType)
-      .every((t) => !t.getStringIndexType() && !t.getNumberIndexType())
+    allLeftTypes.some(
+      (t) =>
+        t.getStringIndexType() !== undefined ||
+        (t.getNumberIndexType() !== undefined &&
+          (t as TypeOptionalSymbol).symbol?.name !== "Array"),
+    )
   ) {
-    compareNames(
-      getAllPropertyNames(leftType),
-      getAllPropertyNames(rightType),
-      rightNode,
-      context,
-    );
+    return;
+  }
+
+  for (const rightType of allRightTypes) {
+    const rightResolvedType = resolveType(rightType);
+
+    if (!isObjectLiteral(rightResolvedType)) {
+      continue;
+    }
+
+    const rightPropertyNames = rightResolvedType
+      .getProperties()
+      .map((p) => p.name);
+
+    let bestMatchExcessPropertyNames: string[] | null = null;
+    for (const leftType of allLeftTypes) {
+      const leftResolvedType = resolveType(leftType);
+      const leftPropertyNames = leftResolvedType
+        .getProperties()
+        .map((p) => p.name);
+
+      const excessPropertyNames = rightPropertyNames.filter(
+        (n) => !leftPropertyNames.includes(n),
+      );
+
+      if (
+        leftPropertyNames.length > 0 &&
+        (bestMatchExcessPropertyNames === null ||
+          excessPropertyNames.length < bestMatchExcessPropertyNames.length)
+      ) {
+        bestMatchExcessPropertyNames = excessPropertyNames;
+      }
+    }
+
+    if (
+      bestMatchExcessPropertyNames &&
+      bestMatchExcessPropertyNames.length > 0
+    ) {
+      context.report({
+        data: {
+          excessPropertyNames: bestMatchExcessPropertyNames.join(", "),
+        },
+        messageId: "noExcessProperties",
+        node: rightNode,
+      });
+    }
   }
 }
 
@@ -106,7 +116,7 @@ const noExcessProperties = createRule({
         const leftType = services.getTypeAtLocation(node.left);
         const rightType = services.getTypeAtLocation(node.right);
 
-        compareSymbols(leftType, rightType, node.right, context);
+        compareTypes(leftType, rightType, node.right, context);
       },
       CallExpression(node) {
         if (node.arguments.length <= 0) {
@@ -142,7 +152,7 @@ const noExcessProperties = createRule({
             }
           }
 
-          compareSymbols(paramType, argType, node.arguments[i], context);
+          compareTypes(paramType, argType, node.arguments[i], context);
         }
       },
       Property(node) {
@@ -159,7 +169,7 @@ const noExcessProperties = createRule({
           return;
         }
 
-        compareSymbols(leftType, rightType, node, context);
+        compareTypes(leftType, rightType, node, context);
       },
       ReturnStatement(node) {
         if (!node.argument) {
@@ -190,7 +200,7 @@ const noExcessProperties = createRule({
 
         const argType = services.getTypeAtLocation(node.argument);
 
-        compareSymbols(returnType, argType, node.argument, context);
+        compareTypes(returnType, argType, node.argument, context);
       },
       VariableDeclarator(node) {
         if (!node.id.typeAnnotation || !node.init) {
@@ -202,7 +212,7 @@ const noExcessProperties = createRule({
         );
         const rightType = services.getTypeAtLocation(node.init);
 
-        compareSymbols(leftType, rightType, node.init, context);
+        compareTypes(leftType, rightType, node.init, context);
       },
     };
   },
