@@ -24,55 +24,72 @@ function isObjectLiteral(type: ts.Type): boolean {
   );
 }
 
-function resolveType(type: ts.Type) {
-  let resolvedType = type;
+function splitTypes(types: ts.Type[]) {
+  const result = {
+    advancedTypes: [[], []] as ts.Type[][],
+    basicTypes: [] as ts.Type[],
+  };
 
-  const callSignatures = resolvedType.getCallSignatures();
-  if (callSignatures.length === 1) {
-    resolvedType = callSignatures[0].getReturnType();
-  }
-
-  const arrayType = resolvedType.getNumberIndexType();
-  if (
-    arrayType &&
-    (resolvedType as TypeOptionalSymbol).symbol?.name === "Array"
-  ) {
-    resolvedType = arrayType;
-  }
-
-  return resolvedType;
-}
-
-function compareTypes(
-  leftType: ts.Type,
-  rightType: ts.Type,
-  rightNode: TSESTree.Node,
-  context: Readonly<RuleContext<"noExcessProperties", []>>,
-): void {
-  const allLeftTypes = tsutils.unionConstituents(leftType);
-  const allRightTypes = tsutils.unionConstituents(rightType);
-
-  for (const rightType of allRightTypes) {
-    const rightResolvedType = resolveType(rightType);
-
-    if (!isObjectLiteral(rightResolvedType)) {
+  for (const type of types) {
+    const callSignatures = type.getCallSignatures();
+    if (callSignatures.length === 1) {
+      result.advancedTypes[0].push(callSignatures[0].getReturnType());
       continue;
     }
 
-    const rightPropertyNames = rightResolvedType
-      .getProperties()
-      .map((p) => p.name);
+    const arrayType = type.getNumberIndexType();
+    if (arrayType && (type as TypeOptionalSymbol).symbol?.name === "Array") {
+      result.advancedTypes[1].push(arrayType);
+      continue;
+    }
+
+    result.basicTypes.push(type);
+  }
+
+  return result;
+}
+
+function compareTypes(
+  leftTypes: ts.Type[],
+  rightTypes: ts.Type[],
+  rightNode: TSESTree.Node,
+  context: Readonly<RuleContext<"noExcessProperties", []>>,
+): void {
+  const allLeftTypes = splitTypes(
+    leftTypes.flatMap((t) => tsutils.unionConstituents(t)),
+  );
+  const allRightTypes = splitTypes(
+    rightTypes.flatMap((t) => tsutils.unionConstituents(t)),
+  );
+
+  for (let i = 0; i < allLeftTypes.advancedTypes.length; i++) {
+    if (
+      allLeftTypes.advancedTypes[i].length > 0 &&
+      allRightTypes.advancedTypes[i].length > 0
+    ) {
+      compareTypes(
+        allLeftTypes.advancedTypes[i],
+        allRightTypes.advancedTypes[i],
+        rightNode,
+        context,
+      );
+    }
+  }
+
+  for (const rightType of allRightTypes.basicTypes) {
+    if (!isObjectLiteral(rightType)) {
+      continue;
+    }
+
+    const rightPropertyNames = rightType.getProperties().map((p) => p.name);
 
     let bestMatchExcessPropertyNames: string[] | null = null;
-    for (const leftType of allLeftTypes) {
-      const leftResolvedType = resolveType(leftType);
-      const leftPropertyNames = leftResolvedType
-        .getProperties()
-        .map((p) => p.name);
+    for (const leftType of allLeftTypes.basicTypes) {
+      const leftPropertyNames = leftType.getProperties().map((p) => p.name);
 
       if (
-        leftResolvedType.getStringIndexType() !== undefined ||
-        leftResolvedType.getNumberIndexType() !== undefined
+        leftType.getStringIndexType() !== undefined ||
+        leftType.getNumberIndexType() !== undefined
       ) {
         bestMatchExcessPropertyNames = null;
         break;
@@ -116,7 +133,7 @@ const noExcessProperties = createRule({
         const leftType = services.getTypeAtLocation(node.left);
         const rightType = services.getTypeAtLocation(node.right);
 
-        compareTypes(leftType, rightType, node.right, context);
+        compareTypes([leftType], [rightType], node.right, context);
       },
       CallExpression(node) {
         if (node.arguments.length <= 0) {
@@ -152,7 +169,7 @@ const noExcessProperties = createRule({
             }
           }
 
-          compareTypes(paramType, argType, node.arguments[i], context);
+          compareTypes([paramType], [argType], node.arguments[i], context);
         }
       },
       Property(node) {
@@ -169,7 +186,7 @@ const noExcessProperties = createRule({
           return;
         }
 
-        compareTypes(leftType, rightType, node, context);
+        compareTypes([leftType], [rightType], node, context);
       },
       ReturnStatement(node) {
         if (!node.argument) {
@@ -200,7 +217,7 @@ const noExcessProperties = createRule({
 
         const argType = services.getTypeAtLocation(node.argument);
 
-        compareTypes(returnType, argType, node.argument, context);
+        compareTypes([returnType], [argType], node.argument, context);
       },
       VariableDeclarator(node) {
         if (!node.id.typeAnnotation || !node.init) {
@@ -212,7 +229,7 @@ const noExcessProperties = createRule({
         );
         const rightType = services.getTypeAtLocation(node.init);
 
-        compareTypes(leftType, rightType, node.init, context);
+        compareTypes([leftType], [rightType], node.init, context);
       },
     };
   },
