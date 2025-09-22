@@ -153,7 +153,9 @@ function compareTypes(
       }
 
       const excessProperties = rightProperties.filter(
-        (p) => !leftPropertyNames.includes(p.name),
+        (p) =>
+          !leftPropertyNames.includes(p.name) &&
+          (p.flags & ts.SymbolFlags.Optional) === 0,
       );
 
       if (

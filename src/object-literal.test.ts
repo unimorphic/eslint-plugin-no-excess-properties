@@ -346,6 +346,38 @@ ruleTester.run("object-literal", objectLiteral, {
 ruleTester.run("object-literal", objectLiteral, {
   valid: [
     `
+      function test(): () =>
+        | { prop1: 1; prop2: number }
+        | { prop1: 2; prop3: number } {
+        return () => {
+          return true
+            ? { prop1: 1, prop2: 1 }
+            : { prop1: 2, prop3: 2 };
+        };
+      }
+    `,
+  ],
+  invalid: [
+    {
+      code: `
+        function test(): () =>
+          | { prop1: 1; prop2: number }
+          | { prop1: 2; prop3: number } {
+          return () => {
+            return true
+              ? { prop1: 1, prop2: 1, prop3: 1 }
+              : { prop1: 2, prop3: 2 };
+          };
+        }
+      `,
+      errors: [createError({ column: 39, endColumn: 47, line: 7 })],
+    },
+  ],
+});
+
+ruleTester.run("object-literal", objectLiteral, {
+  valid: [
+    `
       const test: Record<string, number> & { prop2: 1 } = { prop1: 1 };
     `,
     `
