@@ -45,7 +45,7 @@ export default tseslint.config({
 
 ## Example Linted Code
 
-See the [test file](https://bitbucket.org/unimorphic/eslint-plugin-no-excess-properties/src/master/src/object-literal.test.ts) for more examples
+See the [test file](https://github.com/unimorphic/eslint-plugin-no-excess-properties/blob/master/src/object-literal.test.ts) for more examples
 
 ### Incorrect
 
@@ -69,7 +69,7 @@ Related typescript-eslint issue: https://github.com/typescript-eslint/typescript
 
 ## Feedback
 
-[Submit](https://bitbucket.org/unimorphic/eslint-plugin-no-excess-properties/issues/new) bug reports and other feedback in the [issues](https://bitbucket.org/unimorphic/eslint-plugin-no-excess-properties/issues?status=new&status=open) section
+[Submit](https://github.com/unimorphic/eslint-plugin-no-excess-properties/issues/new) bug reports and other feedback in the [issues](https://github.com/unimorphic/eslint-plugin-no-excess-properties/issues) section
 
 ## License
 

@@ -19,7 +19,7 @@ type TypeOptionalSymbol = Omit<ts.Type, "symbol"> & {
 };
 
 const createRule = ESLintUtils.RuleCreator<PluginDocs>(
-  () => "https://bitbucket.org/unimorphic/eslint-plugin-no-excess-properties",
+  () => "https://github.com/unimorphic/eslint-plugin-no-excess-properties",
 );
 
 function isObjectLiteral(type: ts.Type): boolean {
