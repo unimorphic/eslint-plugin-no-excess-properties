@@ -15,7 +15,7 @@ const plugin = {
         },
         rules: {
           "no-excess-properties/object-literal": "warn",
-        },
+        } as const,
       };
     },
   },
