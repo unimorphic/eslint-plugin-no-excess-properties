@@ -17,10 +17,10 @@ In the `eslint.config.mjs` file:
 ### Basic
 
 ```
-import tseslint from "typescript-eslint";
+import { defineConfig } from "eslint/config";
 import noExcessProperties from "eslint-plugin-no-excess-properties";
 
-export default tseslint.config({
+export default defineConfig({
   extends: [
     noExcessProperties.configs.recommended,
   ],
@@ -30,10 +30,10 @@ export default tseslint.config({
 ### Fancy
 
 ```
-import tseslint from "typescript-eslint";
+import { defineConfig } from "eslint/config";
 import noExcessProperties from "eslint-plugin-no-excess-properties";
 
-export default tseslint.config({
+export default defineConfig({
   plugins: {
     "no-excess-properties": noExcessProperties,
   },
