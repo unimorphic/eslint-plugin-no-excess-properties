@@ -33,4 +33,4 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Publish
-        run: npm run publish
+        run: npm publish --tag latest
