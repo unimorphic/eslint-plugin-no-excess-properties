@@ -2,7 +2,7 @@
 
 ESLint plugin for TypeScript that warns when there are excess properties on object literals
 
-Currently has a single rule `no-excess-properties/object-literal` that uses [typed linting](https://typescript-eslint.io/getting-started/typed-linting)
+Currently has a single rule `no-excess-properties/object-literal`
 
 ## Install
 
@@ -12,7 +12,7 @@ npm install --save-dev eslint-plugin-no-excess-properties
 
 ## Config
 
-In the `eslint.config.mjs` file:
+Make sure [typed linting](https://typescript-eslint.io/getting-started/typed-linting) is enabled in your project first, then add to the `eslint.config.mjs` file:
 
 ### Basic
 

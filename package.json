@@ -21,29 +21,34 @@
     }
   },
   "main": "dist/index.js",
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "format": "prettier --write .",
+    "format-check": "prettier --check .",
     "lint": "eslint .",
-    "prepare": "npm run build",
+    "pack": "pnpm run build && pnpm pack",
+    "prepare": "pnpm run build",
     "test": "vitest"
   },
   "dependencies": {
-    "@typescript-eslint/utils": "8.58.0",
+    "@typescript-eslint/utils": "8.71.1",
     "ts-api-utils": "2.5.0"
   },
   "peerDependencies": {
-    "@eslint/js": ">=9.0.0",
     "@typescript-eslint/parser": ">=8.0.0",
     "eslint": ">=9.0.0",
-    "typescript": ">=5.0.0"
+    "typescript": ">=5.0.0 <7.0.0"
   },
   "devDependencies": {
-    "@types/node": "25.5.2",
-    "@typescript-eslint/rule-tester": "8.58.0",
-    "eslint-plugin-eslint-plugin": "7.3.2",
-    "prettier": "3.8.1",
-    "typescript-eslint": "8.58.0",
-    "vitest": "4.1.2"
+    "@eslint/js": "10.0.1",
+    "@types/node": "26.6.5",
+    "@typescript-eslint/rule-tester": "8.71.1",
+    "eslint-plugin-eslint-plugin": "7.6.2",
+    "prettier": "3.9.10",
+    "typescript-eslint": "8.71.1",
+    "vitest": "5.0.3"
   }
 }

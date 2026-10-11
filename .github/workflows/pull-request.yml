@@ -17,18 +17,19 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: setup node
-        uses: actions/setup-node@v6
+
+      - name: setup & run pnpm
+        uses: pnpm/setup@v3
         with:
-          node-version: 22
-      - name: install dependencies
-        run: npm install
+          version: 11
+          runtime: node@24
+          cache: true
 
       - name: run prettier
-        run: npm run format-check
+        run: pnpm run format-check
 
       - name: run lint
-        run: npm run lint
+        run: pnpm run lint
 
       - name: run tests
-        run: npm run test
+        run: pnpm run test

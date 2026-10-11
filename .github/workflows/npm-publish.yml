@@ -19,18 +19,17 @@ jobs:
   publish:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: checkout
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
-      - name: Setup Node
-        uses: actions/setup-node@v6
+
+      - name: setup & run pnpm
+        uses: pnpm/setup@v3
         with:
-          node-version: 22.22.1
-          registry-url: "https://registry.npmjs.org"
-      - name: Update npm
-        run: npm install -g npm@latest
-      - name: Install dependencies
-        run: npm install
-      - name: Publish
-        run: npm publish --tag latest
+          version: 11
+          runtime: node@24
+          cache: true
+
+      - name: publish
+        run: pnpm publish --tag latest
