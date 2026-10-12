@@ -163,8 +163,9 @@ function compareTypes(
       const leftPropertyNames = getPropertyNames(leftType);
 
       if (
-        leftType.getStringIndexType() !== undefined ||
-        leftType.getNumberIndexType() !== undefined
+        !(leftType.flags & ts.TypeFlags.String) &&
+        (leftType.getStringIndexType() !== undefined ||
+          leftType.getNumberIndexType() !== undefined)
       ) {
         bestMatchExcessProperties = null;
         break;
