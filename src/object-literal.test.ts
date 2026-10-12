@@ -561,6 +561,11 @@ ruleTester.run("object-literal", objectLiteral, {
       const test2 = { prop1: 2 };
       let test1 = (): { prop1: number; } => test2;
     `,
+    `
+      const test = { prop1: 2 };
+      class Test { constructor(test: { prop1: number; }) }
+      new Test(test);
+    `,
   ],
   invalid: [
     {
@@ -569,6 +574,14 @@ ruleTester.run("object-literal", objectLiteral, {
         let test1 = (): { prop1: number; } => test2;
       `,
       errors: [createError({ column: 47, endColumn: 52, line: 3 })],
+    },
+    {
+      code: `
+        const test = { prop1: 2, prop2: 3 };
+        class Test { constructor(test: { prop1: number; }) }
+        new Test(test);
+      `,
+      errors: [createError({ column: 18, endColumn: 22, line: 4 })],
     },
   ],
 });
