@@ -343,6 +343,18 @@ const noExcessProperties = createRule({
 
         compareTypes([returnType], [argType], node.argument, context, services);
       },
+      TSSatisfiesExpression(node) {
+        const leftType = services.getTypeAtLocation(node.typeAnnotation);
+        const rightType = services.getTypeAtLocation(node.expression);
+
+        compareTypes(
+          [leftType],
+          [rightType],
+          node.expression,
+          context,
+          services,
+        );
+      },
       VariableDeclarator(node) {
         if (!node.id.typeAnnotation || !node.init) {
           return;
