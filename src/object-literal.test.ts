@@ -459,11 +459,6 @@ ruleTester.run("object-literal", objectLiteral, {
       ({ prop1 } = test);
     `,
     `
-      let prop1: { prop1: number };
-      const test = { prop1: 1, prop2: 2 };
-      [prop1] = [test];
-    `,
-    `
       function* test(): Generator<number, { prop1: number }> {
         yield 1;
         return { prop1: 1 };
@@ -578,6 +573,10 @@ ruleTester.run("object-literal", objectLiteral, {
       const test2 = { prop1: 2 };
       let test1 = test2 satisfies { prop1: number };
     `,
+    `
+      const test2 = { prop1: 2 };
+      const test1: [{ prop1: number }] = [test2];
+    `,
   ],
   invalid: [
     {
@@ -615,6 +614,13 @@ ruleTester.run("object-literal", objectLiteral, {
         let test1 = test2 satisfies { prop1: number };
       `,
       errors: [createError({ column: 21, endColumn: 26, line: 3 })],
+    },
+    {
+      code: `
+        const test2 = { prop1: 2, prop2: 3 };
+        const test1: [{ prop1: number }] = [test2];
+      `,
+      errors: [createError({ column: 44, endColumn: 51, line: 3 })],
     },
   ],
 });
