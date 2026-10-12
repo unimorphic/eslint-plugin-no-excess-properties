@@ -259,6 +259,12 @@ const noExcessProperties = createRule({
 
         compareTypes([leftType], [rightType], node.right, context, services);
       },
+      AssignmentPattern(node) {
+        const leftType = services.getTypeAtLocation(node.left);
+        const rightType = services.getTypeAtLocation(node.right);
+
+        compareTypes([leftType], [rightType], node.right, context, services);
+      },
       CallExpression(node) {
         compareFunctionArguments(node, context, services, typeChecker);
       },
