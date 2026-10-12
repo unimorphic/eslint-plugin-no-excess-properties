@@ -345,32 +345,37 @@ ruleTester.run("object-literal", objectLiteral, {
 
 ruleTester.run("object-literal", objectLiteral, {
   valid: [
+    /*
+      The following code generates a union for the return value:
+      { prop1: number; prop2: number; prop3?: undefined } | { prop1: number; prop2?: number; prop3: undefined }
+      so it generates false warnings, ignoring optional properties misses other real scenarios like the one below.
+      Use eslint-disable no-excess-properties/object-literal as a workaround
+    */
     `
       function test(): () =>
         | { prop1: 1; prop2: number }
         | { prop1: 2; prop3: number } {
         return () => {
+          /* eslint-disable @rule-tester/object-literal */
           return true
             ? { prop1: 1, prop2: 1 }
             : { prop1: 2, prop3: 2 };
+          /* eslint-enable @rule-tester/object-literal */
         };
       }
+    `,
+    `
+      let test1: { prop1: number; prop2?: number; } = { prop1: 1 };
+      const test2: { prop1: 2; prop2?: number; } = { ...test1 };
     `,
   ],
   invalid: [
     {
       code: `
-        function test(): () =>
-          | { prop1: 1; prop2: number }
-          | { prop1: 2; prop3: number } {
-          return () => {
-            return true
-              ? { prop1: 1, prop2: 1, prop3: 1 }
-              : { prop1: 2, prop3: 2 };
-          };
-        }
+        let test1: { prop1: number; prop2?: number; } = { prop1: 1 };
+        const test2: { prop1: 2 } = { ...test1 };
       `,
-      errors: [createError({ column: 39, endColumn: 47, line: 7 })],
+      errors: [createError({ column: 37, endColumn: 49, line: 3 })],
     },
   ],
 });
