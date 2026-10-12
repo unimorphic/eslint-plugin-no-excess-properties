@@ -195,6 +195,42 @@ function compareTypes(
   }
 }
 
+function compareFunctionArguments(
+  node: TSESTree.NewExpression | TSESTree.CallExpression,
+  context: Readonly<RuleContext<"noExcessProperties" | "noExcessProperty", []>>,
+  services: ParserServicesWithTypeInformation,
+  typeChecker: ts.TypeChecker,
+) {
+  if (node.arguments.length <= 0) {
+    return;
+  }
+
+  const functionNode = services.esTreeNodeToTSNodeMap.get(node);
+  const functionSignature = typeChecker.getResolvedSignature(functionNode);
+
+  if (!functionSignature) {
+    return;
+  }
+
+  for (let i = 0; i < node.arguments.length; i++) {
+    const params = functionSignature.parameters;
+    const param = params[i < params.length ? i : params.length - 1];
+
+    const argType = services.getTypeAtLocation(node.arguments[i]);
+    let paramType = typeChecker.getTypeOfSymbolAtLocation(param, functionNode);
+
+    const declarations = param.declarations;
+    if (declarations?.some((d) => ts.isParameter(d) && d.dotDotDotToken)) {
+      const arrayType = paramType.getNumberIndexType();
+      if (arrayType) {
+        paramType = arrayType;
+      }
+    }
+
+    compareTypes([paramType], [argType], node.arguments[i], context, services);
+  }
+}
+
 const noExcessProperties = createRule({
   create: function (context) {
     const services = ESLintUtils.getParserServices(context);
@@ -224,46 +260,10 @@ const noExcessProperties = createRule({
         compareTypes([leftType], [rightType], node.right, context, services);
       },
       CallExpression(node) {
-        if (node.arguments.length <= 0) {
-          return;
-        }
-
-        const functionNode = services.esTreeNodeToTSNodeMap.get(node);
-        const functionSignature =
-          typeChecker.getResolvedSignature(functionNode);
-
-        if (!functionSignature) {
-          return;
-        }
-
-        for (let i = 0; i < node.arguments.length; i++) {
-          const params = functionSignature.parameters;
-          const param = params[i < params.length ? i : params.length - 1];
-
-          const argType = services.getTypeAtLocation(node.arguments[i]);
-          let paramType = typeChecker.getTypeOfSymbolAtLocation(
-            param,
-            functionNode,
-          );
-
-          const declarations = param.declarations;
-          if (
-            declarations?.some((d) => ts.isParameter(d) && d.dotDotDotToken)
-          ) {
-            const arrayType = paramType.getNumberIndexType();
-            if (arrayType) {
-              paramType = arrayType;
-            }
-          }
-
-          compareTypes(
-            [paramType],
-            [argType],
-            node.arguments[i],
-            context,
-            services,
-          );
-        }
+        compareFunctionArguments(node, context, services, typeChecker);
+      },
+      NewExpression(node) {
+        compareFunctionArguments(node, context, services, typeChecker);
       },
       Property(node) {
         const leftNode = services.esTreeNodeToTSNodeMap.get(node);
