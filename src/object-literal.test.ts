@@ -505,3 +505,32 @@ ruleTester.run("object-literal", objectLiteral, {
     },
   ],
 });
+
+ruleTester.run("object-literal", objectLiteral, {
+  valid: [
+    `
+      const test: { prop1: number; }[] = [];
+      test.push({ prop1: 1 }, { prop1: 1 })
+    `,
+    `
+      function test(...param1: { prop1: number }[]) {}
+      test({ prop1: 1 }, { prop1: 1 });
+    `,
+  ],
+  invalid: [
+    {
+      code: `
+        const test: { prop1: number; }[] = [];
+        test.push({ prop1: 1 }, { prop1: 1, prop: 2 })
+      `,
+      errors: [createError({ column: 45, endColumn: 52, line: 3 })],
+    },
+    {
+      code: `
+        function test(...param1: { prop1: number }[]) {}
+        test({ prop1: 1 }, { prop1: 1, prop2: 2 });
+      `,
+      errors: [createError({ column: 40, endColumn: 48, line: 3 })],
+    },
+  ],
+});

@@ -223,18 +223,17 @@ const noExcessProperties = createRule({
           return;
         }
 
-        for (let i = 0; i < functionSignature.parameters.length; i++) {
-          if (i > node.arguments.length - 1) {
-            break;
-          }
+        for (let i = 0; i < node.arguments.length; i++) {
+          const params = functionSignature.parameters;
+          const param = params[i < params.length ? i : params.length - 1];
 
           const argType = services.getTypeAtLocation(node.arguments[i]);
           let paramType = typeChecker.getTypeOfSymbolAtLocation(
-            functionSignature.parameters[i],
+            param,
             functionNode,
           );
 
-          const declarations = functionSignature.parameters[i].declarations;
+          const declarations = param.declarations;
           if (
             declarations?.some((d) => ts.isParameter(d) && d.dotDotDotToken)
           ) {
