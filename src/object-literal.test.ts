@@ -574,6 +574,10 @@ ruleTester.run("object-literal", objectLiteral, {
       const test1 = { prop1: 2 };
       function test(param1: { prop1: number } = test1) {}
     `,
+    `
+      const test2 = { prop1: 2 };
+      let test1 = test2 satisfies { prop1: number };
+    `,
   ],
   invalid: [
     {
@@ -604,6 +608,13 @@ ruleTester.run("object-literal", objectLiteral, {
         function test(param1: { prop1: number } = test1) {}
       `,
       errors: [createError({ column: 51, endColumn: 56, line: 3 })],
+    },
+    {
+      code: `
+        const test2 = { prop1: 2, prop2: 3 };
+        let test1 = test2 satisfies { prop1: number };
+      `,
+      errors: [createError({ column: 21, endColumn: 26, line: 3 })],
     },
   ],
 });
