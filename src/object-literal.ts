@@ -281,6 +281,22 @@ const noExcessProperties = createRule({
 
         compareTypes([leftType], [rightType], node, context, services);
       },
+      PropertyDefinition(node) {
+        const leftNode = services.esTreeNodeToTSNodeMap.get(node);
+
+        if (!leftNode.initializer || !node.value) {
+          return;
+        }
+
+        const leftType = typeChecker.getContextualType(leftNode.initializer);
+        const rightType = services.getTypeAtLocation(node.value);
+
+        if (!leftType) {
+          return;
+        }
+
+        compareTypes([leftType], [rightType], node.value, context, services);
+      },
       ReturnStatement(node) {
         if (!node.argument) {
           return;
