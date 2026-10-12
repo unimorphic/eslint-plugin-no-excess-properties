@@ -55,7 +55,7 @@ function isChildNode(node: TSESTree.Node, parentNode: TSESTree.Node) {
   return false;
 }
 
-function splitTypes(types: ts.Type[]) {
+function splitTypes(types: ts.Type[], typeChecker: ts.TypeChecker) {
   const result = {
     advancedTypes: [[], []] as ts.Type[][],
     basicTypes: [] as ts.Type[],
@@ -69,7 +69,7 @@ function splitTypes(types: ts.Type[]) {
     }
 
     const arrayType = type.getNumberIndexType();
-    if (arrayType && (type as TypeOptionalSymbol).symbol?.name === "Array") {
+    if (arrayType && typeChecker.isArrayLikeType(type)) {
       result.advancedTypes[1].push(arrayType);
       continue;
     }
@@ -125,13 +125,16 @@ function compareTypes(
   rightNode: TSESTree.Node,
   context: Readonly<RuleContext<"noExcessProperties" | "noExcessProperty", []>>,
   services: ParserServicesWithTypeInformation,
+  typeChecker: ts.TypeChecker,
   depth = 0,
 ): void {
   const allLeftTypes = splitTypes(
     leftTypes.flatMap((t) => tsutils.unionConstituents(t)),
+    typeChecker,
   );
   const allRightTypes = splitTypes(
     rightTypes.flatMap((t) => tsutils.unionConstituents(t)),
+    typeChecker,
   );
 
   for (let i = 0; i < allLeftTypes.advancedTypes.length; i++) {
@@ -146,6 +149,7 @@ function compareTypes(
         rightNode,
         context,
         services,
+        typeChecker,
         depth + 1,
       );
     }
@@ -227,7 +231,14 @@ function compareFunctionArguments(
       }
     }
 
-    compareTypes([paramType], [argType], node.arguments[i], context, services);
+    compareTypes(
+      [paramType],
+      [argType],
+      node.arguments[i],
+      context,
+      services,
+      typeChecker,
+    );
   }
 }
 
@@ -247,7 +258,14 @@ const noExcessProperties = createRule({
         );
         const rightType = services.getTypeAtLocation(node.body);
 
-        compareTypes([leftType], [rightType], node.body, context, services);
+        compareTypes(
+          [leftType],
+          [rightType],
+          node.body,
+          context,
+          services,
+          typeChecker,
+        );
       },
       AssignmentExpression(node) {
         if (node.left.type === AST_NODE_TYPES.ObjectPattern) {
@@ -257,13 +275,27 @@ const noExcessProperties = createRule({
         const leftType = services.getTypeAtLocation(node.left);
         const rightType = services.getTypeAtLocation(node.right);
 
-        compareTypes([leftType], [rightType], node.right, context, services);
+        compareTypes(
+          [leftType],
+          [rightType],
+          node.right,
+          context,
+          services,
+          typeChecker,
+        );
       },
       AssignmentPattern(node) {
         const leftType = services.getTypeAtLocation(node.left);
         const rightType = services.getTypeAtLocation(node.right);
 
-        compareTypes([leftType], [rightType], node.right, context, services);
+        compareTypes(
+          [leftType],
+          [rightType],
+          node.right,
+          context,
+          services,
+          typeChecker,
+        );
       },
       CallExpression(node) {
         compareFunctionArguments(node, context, services, typeChecker);
@@ -285,7 +317,14 @@ const noExcessProperties = createRule({
           return;
         }
 
-        compareTypes([leftType], [rightType], node, context, services);
+        compareTypes(
+          [leftType],
+          [rightType],
+          node,
+          context,
+          services,
+          typeChecker,
+        );
       },
       PropertyDefinition(node) {
         const leftNode = services.esTreeNodeToTSNodeMap.get(node);
@@ -301,7 +340,14 @@ const noExcessProperties = createRule({
           return;
         }
 
-        compareTypes([leftType], [rightType], node.value, context, services);
+        compareTypes(
+          [leftType],
+          [rightType],
+          node.value,
+          context,
+          services,
+          typeChecker,
+        );
       },
       ReturnStatement(node) {
         if (!node.argument) {
@@ -341,7 +387,14 @@ const noExcessProperties = createRule({
 
         const argType = services.getTypeAtLocation(node.argument);
 
-        compareTypes([returnType], [argType], node.argument, context, services);
+        compareTypes(
+          [returnType],
+          [argType],
+          node.argument,
+          context,
+          services,
+          typeChecker,
+        );
       },
       TSSatisfiesExpression(node) {
         const leftType = services.getTypeAtLocation(node.typeAnnotation);
@@ -353,6 +406,7 @@ const noExcessProperties = createRule({
           node.expression,
           context,
           services,
+          typeChecker,
         );
       },
       VariableDeclarator(node) {
@@ -365,7 +419,14 @@ const noExcessProperties = createRule({
         );
         const rightType = services.getTypeAtLocation(node.init);
 
-        compareTypes([leftType], [rightType], node.init, context, services);
+        compareTypes(
+          [leftType],
+          [rightType],
+          node.init,
+          context,
+          services,
+          typeChecker,
+        );
       },
     };
   },
