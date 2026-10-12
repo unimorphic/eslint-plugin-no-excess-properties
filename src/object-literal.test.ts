@@ -446,3 +446,62 @@ ruleTester.run("object-literal", objectLiteral, {
     },
   ],
 });
+
+ruleTester.run("object-literal", objectLiteral, {
+  valid: [
+    `
+      let prop1: number;
+      ({ prop1 } = { prop1: 1, prop2: 2 });
+    `,
+    `
+      let prop1: number;
+      const test = { prop1: 1, prop2: 2 };
+      ({ prop1 } = test);
+    `,
+    `
+      let prop1: { prop1: number };
+      const test = { prop1: 1, prop2: 2 };
+      [prop1] = [test];
+    `,
+    `
+      function* test(): Generator<number, { prop1: number }> {
+        yield 1;
+        return { prop1: 1 };
+      }
+    `,
+    `
+      async function* test(): AsyncGenerator<number, { prop1: number }> {
+        yield 1;
+        return { prop1: 1 };
+      }
+    `,
+    `
+      function* test(): Iterable<number> {
+        yield 1;
+        return;
+      }
+    `,
+  ],
+  invalid: [
+    {
+      code: `
+        const test1 = { prop1: 1, prop2: 2 };
+        function* test2(): Generator<number, { prop1: number }> {
+          yield 1;
+          return test1;
+        }
+      `,
+      errors: [createError({ column: 18, endColumn: 23, line: 5 })],
+    },
+    {
+      code: `
+        const test1 = { prop1: 1, prop2: 2 };
+        async function* test2(): AsyncGenerator<number, { prop1: number }> {
+          yield 1;
+          return test1;
+        }
+      `,
+      errors: [createError({ column: 18, endColumn: 23, line: 5 })],
+    },
+  ],
+});
