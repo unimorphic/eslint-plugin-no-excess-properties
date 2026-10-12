@@ -38,4 +38,4 @@ jobs:
       - name: Install dependencies
         run: pnpm install
       - name: Publish
-        run: pnpm run publish --tag latest
+        run: pnpm publish --tag latest
