@@ -201,6 +201,18 @@ const noExcessProperties = createRule({
     const typeChecker = services.program.getTypeChecker();
 
     return {
+      ArrowFunctionExpression(node) {
+        if (!node.returnType) {
+          return;
+        }
+
+        const leftType = services.getTypeAtLocation(
+          node.returnType.typeAnnotation,
+        );
+        const rightType = services.getTypeAtLocation(node.body);
+
+        compareTypes([leftType], [rightType], node.body, context, services);
+      },
       AssignmentExpression(node) {
         if (node.left.type === AST_NODE_TYPES.ObjectPattern) {
           return;
