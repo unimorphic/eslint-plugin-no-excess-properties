@@ -554,3 +554,21 @@ ruleTester.run("object-literal", objectLiteral, {
     },
   ],
 });
+
+ruleTester.run("object-literal", objectLiteral, {
+  valid: [
+    `
+      const test2 = { prop1: 2 };
+      let test1 = (): { prop1: number; } => test2;
+    `,
+  ],
+  invalid: [
+    {
+      code: `
+        const test2 = { prop1: 2, prop2: 3 };
+        let test1 = (): { prop1: number; } => test2;
+      `,
+      errors: [createError({ column: 47, endColumn: 52, line: 3 })],
+    },
+  ],
+});
