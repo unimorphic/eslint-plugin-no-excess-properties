@@ -210,7 +210,7 @@ function compareFunctionArguments(
   const functionNode = services.esTreeNodeToTSNodeMap.get(node);
   const functionSignature = typeChecker.getResolvedSignature(functionNode);
 
-  if (!functionSignature) {
+  if (!functionSignature || functionSignature.parameters.length <= 0) {
     return;
   }
 

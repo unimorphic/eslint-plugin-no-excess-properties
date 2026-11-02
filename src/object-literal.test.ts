@@ -629,3 +629,13 @@ ruleTester.run("object-literal", objectLiteral, {
     },
   ],
 });
+
+ruleTester.run("object-literal", objectLiteral, {
+  valid: [
+    `
+      const test: any = { test: (param1) => {} };
+      test.test("param");
+    `,
+  ],
+  invalid: [],
+});
